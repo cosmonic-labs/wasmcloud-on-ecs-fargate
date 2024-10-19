@@ -1,5 +1,7 @@
 # WasmCloud on ECS Fargate
 
+![](./fargate.png)
+
 Infrastructure:
 
 - 1 NATS
