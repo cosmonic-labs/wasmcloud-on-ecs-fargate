@@ -39,7 +39,7 @@ resource "aws_ecs_service" "wadm" {
 
   network_configuration {
     security_groups = [aws_security_group.wadm_task.id]
-    subnets         = aws_subnet.private.*.id
+    subnets         = aws_subnet.private[*].id
   }
 
   service_registries {

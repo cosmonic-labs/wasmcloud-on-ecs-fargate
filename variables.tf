@@ -84,8 +84,13 @@ variable "wasmcloud_image" {
   default     = "ghcr.io/wasmcloud/wasmcloud:1.3.1"
 }
 
-variable "wasmcloud_workload_count" {
-  description = "Number of workload tasks to run"
+variable "wasmcloud_workload_min_count" {
+  description = "Minimum number of workload tasks to run"
+  default     = 1
+}
+
+variable "wasmcloud_workload_max_count" {
+  description = "Max number of workload tasks to run"
   default     = 1
 }
 

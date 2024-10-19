@@ -1,6 +1,8 @@
 # WasmCloud on ECS Fargate
 
 ![](./fargate.png)
+![](./autoscaling.png)
+![](./loadbalancer.png)
 
 Infrastructure:
 
@@ -9,6 +11,8 @@ Infrastructure:
   - EFS Volume for persistence
 - 1 wasmCloud wadm
 - 1 wasmCloud worker instance
+  - Autoscaling based on CPU usage
+  - Capacity: 1 min, 1 max ( configurable )
 - 1 wasmCloud ingress instance
   - Public Load Balancer exposing port 80 ( `http` access )
 

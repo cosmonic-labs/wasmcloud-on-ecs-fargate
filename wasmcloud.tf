@@ -34,15 +34,19 @@ resource "aws_ecs_service" "wasmcloud_workload" {
   name            = "wasmcloud-workload"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.wasmcloud_workload.arn
-  desired_count   = var.wasmcloud_workload_count
+  desired_count   = var.wasmcloud_workload_min_count
   launch_type     = "FARGATE"
 
   network_configuration {
     security_groups = [aws_security_group.wasmcloud_workload.id]
-    subnets         = aws_subnet.private.*.id
+    subnets         = aws_subnet.private[*].id
   }
 
   depends_on = [aws_iam_role_policy_attachment.ecs-task-execution-role-policy-attachment]
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 
@@ -58,6 +62,92 @@ resource "aws_security_group" "wasmcloud_workload" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+resource "aws_appautoscaling_target" "wasmcloud_workload" {
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.wasmcloud_workload.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  role_arn           = aws_iam_role.ecs_auto_scale_role.arn
+  min_capacity       = var.wasmcloud_workload_min_count
+  max_capacity       = var.wasmcloud_workload_max_count
+}
+
+resource "aws_appautoscaling_policy" "wasmcloud_workload_up" {
+  name               = "wasmcloud-workload-up"
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.wasmcloud_workload.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+
+  step_scaling_policy_configuration {
+    adjustment_type         = "ChangeInCapacity"
+    cooldown                = 60
+    metric_aggregation_type = "Maximum"
+
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment          = 1
+    }
+  }
+
+  depends_on = [aws_appautoscaling_target.wasmcloud_workload]
+}
+
+resource "aws_cloudwatch_metric_alarm" "wasmcloud_workload_cpu_high" {
+  alarm_name          = "wasmcloud-workload-cpu-high"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = "60"
+  statistic           = "Average"
+  threshold           = "85"
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.wasmcloud_workload.name
+  }
+
+  alarm_actions = [aws_appautoscaling_policy.wasmcloud_workload_up.arn]
+}
+
+resource "aws_appautoscaling_policy" "wasmcloud_workload_down" {
+  name               = "wasmcloud-workload-down"
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.wasmcloud_workload.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+
+  step_scaling_policy_configuration {
+    adjustment_type         = "ChangeInCapacity"
+    cooldown                = 60
+    metric_aggregation_type = "Maximum"
+
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment          = -1
+    }
+  }
+
+  depends_on = [aws_appautoscaling_target.wasmcloud_workload]
+}
+
+resource "aws_cloudwatch_metric_alarm" "wasmcloud_workload_cpu_low" {
+  alarm_name          = "wasmcloud-workload-cpu-low"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = "60"
+  statistic           = "Average"
+  threshold           = "10"
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.wasmcloud_workload.name
+  }
+
+  alarm_actions = [aws_appautoscaling_policy.wasmcloud_workload_down.arn]
+}
+
 
 ## Ingress
 resource "aws_ecs_task_definition" "wasmcloud_ingress" {
@@ -105,7 +195,7 @@ resource "aws_ecs_service" "wasmcloud_ingress" {
 
   network_configuration {
     security_groups = [aws_security_group.wasmcloud_ingress.id]
-    subnets         = aws_subnet.private.*.id
+    subnets         = aws_subnet.private[*].id
   }
 
   load_balancer {
