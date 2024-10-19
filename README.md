@@ -9,6 +9,31 @@ Infrastructure:
 - 1 wasmCloud ingress instance
   - Public Load Balancer exposing port 80 ( `http` access )
 
+## Setup
+
+Create a file named `terraform.tvfars` with the following content:
+
+```hcl
+aws_region              = "us-east-2"
+
+# If using aws cli profile (SSO), set it here
+aws_profile             = "enterprise-dev"
+
+# CIDRs for wash access ( default none )
+nats_allowed_cidrs      = ["45.74.99.13/32"]
+
+# CIDRs for http access ( default 0.0.0/0 )
+wasmcloud_allowed_cidrs = ["45.74.99.13/32"]
+```
+
+Apply the terraform configuration:
+
+```shell
+terraform init
+
+terraform apply
+```
+
 ## wash access
 
 ```shell
