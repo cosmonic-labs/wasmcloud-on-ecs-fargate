@@ -190,6 +190,10 @@ resource "aws_lb" "nats" {
   security_groups    = [aws_security_group.nats_public.id]
 }
 
+output "nats_lb" {
+  value = aws_lb.nats.dns_name
+}
+
 resource "aws_lb_target_group" "nats" {
   name        = "nats"
   port        = 4222

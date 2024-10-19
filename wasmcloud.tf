@@ -147,8 +147,8 @@ resource "aws_security_group" "wasmcloud_public" {
 
   ingress {
     protocol    = "tcp"
-    from_port   = 1024
-    to_port     = 65535
+    from_port   = 80
+    to_port     = 80
     cidr_blocks = var.wasmcloud_allowed_cidrs
   }
 
@@ -167,6 +167,10 @@ resource "aws_lb" "wasmcloud_public" {
   security_groups    = [aws_security_group.wasmcloud_public.id]
 }
 
+output "wasmcloud_public_lb" {
+  value = aws_lb.wasmcloud_public.dns_name
+}
+
 # NOTE(lxf): Each exposed port needs a target group / listener
 resource "aws_lb_target_group" "wasmcloud_public" {
   name        = "wasmcloud"
@@ -178,7 +182,7 @@ resource "aws_lb_target_group" "wasmcloud_public" {
 
 resource "aws_lb_listener" "wasmcloud_public" {
   load_balancer_arn = aws_lb.wasmcloud_public.id
-  port              = 8080
+  port              = 80
   protocol          = "TCP"
 
   default_action {
