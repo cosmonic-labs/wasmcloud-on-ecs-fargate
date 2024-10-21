@@ -1,3 +1,5 @@
+
+# NOTE(lxf): Used by all ECS tasks
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "wasmcloud-task-execution"
 

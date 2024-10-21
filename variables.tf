@@ -4,7 +4,7 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "AWS Profile"
+  description = "AWS Profile (if any)"
   type        = string
 }
 
@@ -44,6 +44,12 @@ variable "nats_allowed_cidrs" {
   description = "CIDR blocks to allow access to NATS LB"
   type        = list(string)
   default     = []
+}
+
+variable "nats_enable_ingress" {
+  description = "If the stack should configure a load balancer for NATS"
+  type        = bool
+  default     = true
 }
 
 ## WADM
@@ -114,4 +120,10 @@ variable "wasmcloud_allowed_cidrs" {
   description = "CIDR blocks to allow access to NATS LB"
   type        = list(string)
   default     = ["0.0.0.0/0"]
+}
+
+variable "wasmcloud_enable_ingress" {
+  description = "If the stack should configure a load balancer for wasmcloud ingress"
+  type        = bool
+  default     = true
 }

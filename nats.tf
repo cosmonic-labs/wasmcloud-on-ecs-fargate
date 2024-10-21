@@ -5,6 +5,7 @@ resource "aws_ecs_task_definition" "nats" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.nats_cpu
   memory                   = var.nats_memory
+  skip_destroy             = true
 
   volume {
     name = "data"
@@ -78,14 +79,14 @@ resource "aws_iam_role_policy_attachment" "nats_volume_policy" {
 
 resource "aws_ecs_service" "nats" {
   name            = "nats"
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = aws_ecs_cluster.wasmcloud.id
   task_definition = aws_ecs_task_definition.nats.arn
   desired_count   = var.nats_count
   launch_type     = "FARGATE"
 
   network_configuration {
     security_groups = [aws_security_group.nats_task.id]
-    # NOTE(lxf): gotta match efs mount target
+    # NOTE(lxf): gotta match efs mount target subnet
     subnets = [aws_subnet.private[0].id]
   }
 
@@ -99,14 +100,14 @@ resource "aws_ecs_service" "nats" {
     container_port   = 4222
   }
 
-  depends_on = [aws_lb_listener.nats, aws_iam_role_policy_attachment.ecs-task-execution-role-policy-attachment]
+  depends_on = [aws_iam_role_policy_attachment.ecs-task-execution-role-policy-attachment]
 }
 
 resource "aws_service_discovery_service" "nats" {
   name = "nats"
 
   dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.main.id
+    namespace_id = aws_service_discovery_private_dns_namespace.wasmcloud.id
 
     dns_records {
       ttl  = 60
@@ -124,7 +125,7 @@ resource "aws_service_discovery_service" "nats" {
 resource "aws_security_group" "nats_efs" {
   name        = "nats-efs"
   description = "nats efs security group"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.wasmcloud.id
 
   ingress {
     protocol    = "tcp"
@@ -145,7 +146,7 @@ resource "aws_security_group" "nats_efs" {
 resource "aws_security_group" "nats_task" {
   name        = "nats-task"
   description = "nats taskgroup security group"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.wasmcloud.id
 
   ingress {
     protocol    = "tcp"
@@ -162,10 +163,43 @@ resource "aws_security_group" "nats_task" {
   }
 }
 
+resource "aws_lb" "nats" {
+  name               = "nats-public"
+  count              = var.nats_enable_ingress ? 1 : 0
+  load_balancer_type = "network"
+  subnets            = aws_subnet.public[*].id
+  security_groups    = aws_security_group.nats_public[*].id
+}
+
+output "nats_lb" {
+  value = one(aws_lb.nats[*].dns_name)
+}
+
+resource "aws_lb_target_group" "nats" {
+  name        = "nats"
+  port        = 4222
+  protocol    = "TCP"
+  vpc_id      = aws_vpc.wasmcloud.id
+  target_type = "ip"
+}
+
+resource "aws_lb_listener" "nats" {
+  count             = var.nats_enable_ingress ? 1 : 0
+  load_balancer_arn = one(aws_lb.nats[*].id)
+  port              = 4222
+  protocol          = "TCP"
+
+  default_action {
+    target_group_arn = aws_lb_target_group.nats.id
+    type             = "forward"
+  }
+}
+
 resource "aws_security_group" "nats_public" {
   name        = "nats-public"
+  count       = var.nats_enable_ingress ? 1 : 0
   description = "controls access to the NATS ALB"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.wasmcloud.id
 
   ingress {
     protocol    = "tcp"
@@ -179,36 +213,5 @@ resource "aws_security_group" "nats_public" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-
-resource "aws_lb" "nats" {
-  name               = "nats-public"
-  load_balancer_type = "network"
-  subnets            = aws_subnet.public[*].id
-  security_groups    = [aws_security_group.nats_public.id]
-}
-
-output "nats_lb" {
-  value = aws_lb.nats.dns_name
-}
-
-resource "aws_lb_target_group" "nats" {
-  name        = "nats"
-  port        = 4222
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
-}
-
-resource "aws_lb_listener" "nats" {
-  load_balancer_arn = aws_lb.nats.id
-  port              = 4222
-  protocol          = "TCP"
-
-  default_action {
-    target_group_arn = aws_lb_target_group.nats.id
-    type             = "forward"
   }
 }

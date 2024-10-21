@@ -1,4 +1,4 @@
-resource "aws_ecs_cluster" "main" {
+resource "aws_ecs_cluster" "wasmcloud" {
   name = "wasmcloud"
   setting {
     name  = "containerInsights"
@@ -6,9 +6,9 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
-resource "aws_service_discovery_private_dns_namespace" "main" {
+resource "aws_service_discovery_private_dns_namespace" "wasmcloud" {
   name        = "cluster.wasmcloud"
   description = "wasmcloud"
-  vpc         = aws_vpc.main.id
+  vpc         = aws_vpc.wasmcloud.id
 }
 

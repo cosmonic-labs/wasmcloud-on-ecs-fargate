@@ -5,6 +5,7 @@ resource "aws_ecs_task_definition" "wadm" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.wadm_cpu
   memory                   = var.wadm_memory
+  skip_destroy             = true
 
   container_definitions = jsonencode([
     {
@@ -32,7 +33,7 @@ resource "aws_ecs_task_definition" "wadm" {
 
 resource "aws_ecs_service" "wadm" {
   name            = "wadm"
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = aws_ecs_cluster.wasmcloud.id
   task_definition = aws_ecs_task_definition.wadm.arn
   desired_count   = var.wadm_count
   launch_type     = "FARGATE"
@@ -47,14 +48,13 @@ resource "aws_ecs_service" "wadm" {
   }
 
   depends_on = [aws_iam_role_policy_attachment.ecs-task-execution-role-policy-attachment]
-  #depends_on = [aws_alb_listener.front_end, aws_iam_role_policy_attachment.ecs-task-execution-role-policy-attachment]
 }
 
 resource "aws_service_discovery_service" "wadm" {
   name = "wadm"
 
   dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.main.id
+    namespace_id = aws_service_discovery_private_dns_namespace.wasmcloud.id
 
     dns_records {
       ttl  = 60
@@ -69,13 +69,10 @@ resource "aws_service_discovery_service" "wadm" {
   }
 }
 
-
-
-
 resource "aws_security_group" "wadm_task" {
   name        = "wadm-task"
   description = "wadm taskgroup security group"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.wasmcloud.id
 
   egress {
     protocol    = "-1"
