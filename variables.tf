@@ -1,6 +1,7 @@
 variable "aws_region" {
   description = "The AWS region things are created in"
   type        = string
+  default     = "us-east-1"
 }
 
 variable "aws_profile" {
@@ -8,10 +9,16 @@ variable "aws_profile" {
   type        = string
 }
 
-variable "az_count" {
-  description = "Number of AZs to cover in a given region"
+variable "private_az_count" {
+  description = "Number of Private AZs to cover in a given region"
   type        = number
-  default     = 2
+  default     = 1
+}
+
+variable "public_az_count" {
+  description = "Number of Public AZs to cover in a given region"
+  type        = number
+  default     = 1
 }
 
 ## NATS

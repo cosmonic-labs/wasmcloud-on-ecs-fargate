@@ -17,9 +17,9 @@ spec:
       properties:
         image: ghcr.io/wasmcloud/components/http-hello-world-rust:0.1.0
       traits:
-        - type: spreadscaler
+        - type: daemonscaler
           properties:
-            instances: 1
+            instances: 1000
             spread:
               - name: primary
                 requirements:
