@@ -7,18 +7,11 @@ resource "aws_ecs_task_definition" "nats" {
   memory                   = var.nats_memory
   skip_destroy             = true
 
-  volume {
-    name = "data"
-    efs_volume_configuration {
-      file_system_id = aws_efs_file_system.nats.id
-    }
-  }
-
   container_definitions = jsonencode([
     {
       name        = "nats"
       image       = var.nats_image
-      command     = ["-js", "-sd", "/data"]
+      command     = ["-js"]
       cpu         = var.nats_cpu
       memory      = var.nats_memory
       networkMode = "awsvpc"
@@ -30,29 +23,11 @@ resource "aws_ecs_task_definition" "nats" {
           awslogs-stream-prefix = "nats"
         }
       }
-      mountPoints = [
-        {
-          sourceVolume  = "data"
-          containerPath = "/data"
-        }
-      ]
       portMappings = [
         { protocol = "tcp", containerPort = 4222, hostPort = 4222 }
       ]
     }
   ])
-}
-
-resource "aws_efs_file_system" "nats" {
-  tags = {
-    Name = "nats"
-  }
-}
-
-resource "aws_efs_mount_target" "nats" {
-  file_system_id  = aws_efs_file_system.nats.id
-  subnet_id       = aws_subnet.private[0].id
-  security_groups = [aws_security_group.nats_efs.id]
 }
 
 resource "aws_iam_role" "nats_infra" {
@@ -86,8 +61,7 @@ resource "aws_ecs_service" "nats" {
 
   network_configuration {
     security_groups = [aws_security_group.nats_task.id]
-    # NOTE(lxf): gotta match efs mount target subnet
-    subnets = [aws_subnet.private[0].id]
+    subnets         = aws_subnet.private[*].id
   }
 
   service_registries {
@@ -121,27 +95,6 @@ resource "aws_service_discovery_service" "nats" {
     failure_threshold = 1
   }
 }
-
-resource "aws_security_group" "nats_efs" {
-  name        = "nats-efs"
-  description = "nats efs security group"
-  vpc_id      = aws_vpc.wasmcloud.id
-
-  ingress {
-    protocol    = "tcp"
-    from_port   = 2049 # nfs
-    to_port     = 2049
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 
 resource "aws_security_group" "nats_task" {
   name        = "nats-task"

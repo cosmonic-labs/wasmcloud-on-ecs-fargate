@@ -25,7 +25,7 @@ variable "public_az_count" {
 variable "nats_image" {
   description = "NATS.io Docker Image"
   type        = string
-  default     = "nats:2-alpine"
+  default     = "cgr.dev/chainguard/nats:latest"
 }
 
 variable "nats_count" {
@@ -64,7 +64,7 @@ variable "nats_enable_ingress" {
 variable "wadm_image" {
   description = "WADM Docker Image"
   type        = string
-  default     = "ghcr.io/wasmcloud/wadm:v0.17.0"
+  default     = "ghcr.io/wasmcloud/wadm:v0.17.0-wolfi"
 }
 
 variable "wadm_count" {
@@ -90,7 +90,7 @@ variable "wadm_memory" {
 variable "wasmcloud_image" {
   description = "Wasmcloud Docker Image"
   type        = string
-  default     = "ghcr.io/wasmcloud/wasmcloud:1.3.1"
+  default     = "ghcr.io/wasmcloud/wasmcloud:1.3.1-wolfi"
 }
 
 variable "wasmcloud_workload_min_count" {
