@@ -8,7 +8,7 @@ Infrastructure:
 
 - 1 NATS
   - Public Load Balancer exposing port 4222 ( `wash` access )
-  - EFS Volume for persistence
+  - Ephemeral Volume for Jetstream
 - 1 wasmCloud wadm
 - 1 wasmCloud worker instance
   - Autoscaling based on CPU usage
